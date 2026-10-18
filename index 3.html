@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ShadowSurvivor 2D</title>
+<style>
+:root{--violet:#a855f7;--deep:#120b22;--panel:#211535;--pink:#e879f9}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090711;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}
+#game{display:block;width:100vw;height:100dvh;background:#100b1c}
+#hud{position:fixed;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;z-index:2}
+.panel{background:#160f25dd;border:1px solid #7546a5;border-radius:12px;padding:8px 11px;box-shadow:0 0 16px #6d28d933;font-size:13px}
+#stats{min-width:145px} .bar{height:7px;background:#39294c;border-radius:9px;overflow:hidden;margin-top:4px;width:145px}.fill{height:100%;width:100%;background:linear-gradient(90deg,#9333ea,#e879f9)}
+#topright{text-align:right}
+#message{position:fixed;top:26%;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;text-shadow:0 2px 10px #000;z-index:2;width:90%}
+#message h1{font-size:clamp(22px,5vw,38px);margin:0;color:#e9d5ff}
+#message p{margin:6px 0;font-size:14px}
+#controls{position:fixed;inset:auto 0 12px 0;display:flex;justify-content:space-between;align-items:end;padding:0 16px;pointer-events:none;z-index:3}
+#stick{width:124px;height:124px;border:2px solid #b98ae4aa;background:#311d4c99;border-radius:50%;position:relative;pointer-events:auto;touch-action:none;box-shadow:0 0 20px #9333ea33}
+#nub{position:absolute;width:48px;height:48px;left:36px;top:36px;border-radius:50%;background:#c084fcbb;border:2px solid #f3e8ff;box-shadow:0 0 16px #a855f7}
+#buttons{display:grid;grid-template-columns:repeat(2,64px);gap:9px;pointer-events:auto}
+.ctrl{height:60px;width:64px;border-radius:18px;border:1px solid #c084fc;background:#251238e8;color:white;font-weight:800;font-size:12px;box-shadow:0 0 16px #9333ea33;touch-action:none}
+.ctrl:active{background:#7e22ce}
+#startOverlay{position:fixed;inset:0;background:linear-gradient(#0b0717eF,#170b2bea);display:flex;align-items:center;justify-content:center;z-index:5;padding:20px}
+.card{width:min(430px,100%);border:1px solid #8b5cf6;border-radius:22px;padding:24px;background:#160e25;text-align:center;box-shadow:0 0 50px #7e22ce44}
+.card h1{margin:0;color:#e9d5ff;font-size:clamp(27px,7vw,42px);line-height:1.05}.card p{color:#d8c9e8;line-height:1.45}
+button.primary{border:0;border-radius:12px;background:linear-gradient(90deg,#7e22ce,#c026d3);padding:13px 22px;color:#fff;font-size:16px;font-weight:800}
+.small{font-size:12px!important;color:#b8a5ce!important}
+@media(min-width:800px){#controls{padding:0 28px 20px}#stick{width:110px;height:110px}#nub{left:31px;top:31px}#buttons{grid-template-columns:repeat(4,70px)}.ctrl{width:70px;height:62px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+ <div class="panel" id="stats"><b id="floor">PISO 1</b> · Nivel <span id="level">1</span><div class="bar"><div id="xpbar" class="fill"></div></div><div style="margin-top:5px">❤ <span id="hp">100</span>　✦ <span id="xp">0</span>/<span id="need">30</span></div></div>
+ <div class="panel" id="topright">💰 <span id="gold">0</span><br><span id="kills">Derrotados: 0</span></div>
+</div>
+<div id="message"><h1>SHADOWSURVIVOR</h1><p>Explora la mazmorra y sobrevive.</p></div>
+<div id="controls">
+ <div id="stick" aria-label="Joystick"><div id="nub"></div></div>
+ <div id="buttons">
+  <button class="ctrl" id="attack">⚔️<br>ATACAR</button>
+  <button class="ctrl" id="skill">紫<br>PODER</button>
+  <button class="ctrl" id="dash">➤<br>ESQUIVA</button>
+  <button class="ctrl" id="heal">✚<br>CURAR</button>
+ </div>
+</div>
+<div id="startOverlay"><div class="card"><h1>SHADOW<br>SURVIVOR 2D</h1><p>Una aventura anime de sombras moradas. Derrota monstruos, recoge oro y conquista las mazmorras piso a piso.</p><p><b>PC:</b> WASD o flechas para moverte · Espacio para atacar · Q poder · Shift esquiva · E curar<br><b>iPhone:</b> usa el joystick y los botones.</p><button class="primary" id="play">ENTRAR A LA MAZMORRA</button><p class="small">Prototipo jugable · progreso guardado en este dispositivo</p></div></div>
+<script>
+(() => {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio||1,2);
+function resize(){W=innerWidth;H=innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',resize);resize();
+const ui={floor:document.getElementById('floor'),level:document.getElementById('level'),hp:document.getElementById('hp'),xp:document.getElementById('xp'),need:document.getElementById('need'),xpbar:document.getElementById('xpbar'),gold:document.getElementById('gold'),kills:document.getElementById('kills'),msg:document.getElementById('message')};
+let running=false,gameOver=false,frame=0,keys={},joy={x:0,y:0},stickOn=false;
+let player={x:0,y:0,r:14,hp:100,maxHp:100,speed:2.7,level:1,xp:0,need:30,gold:0,kills:0,attack:18,skillCd:0,dashCd:0,healCd:0,invuln:0};
+let enemies=[],shots=[],particles=[],loot=[],floorNo=1,spawnTimer=0,attackAnim=0;
+const rand=(a,b)=>a+Math.random()*(b-a),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function reset(){let save=null;try{save=JSON.parse(localStorage.getItem('shadowSurvivorSave')||'null')}catch(e){};player={x:W/2,y:H/2,r:14,hp:100,maxHp:100,speed:2.7,level:save?.level||1,xp:0,need:30,gold:save?.gold||0,kills:0,attack:18,skillCd:0,dashCd:0,healCd:0,invuln:0};floorNo=1;enemies=[];shots=[];particles=[];loot=[];for(let i=0;i<5;i++)spawnEnemy();gameOver=false;ui.msg.innerHTML='';}
+function save(){try{localStorage.setItem('shadowSurvivorSave',JSON.stringify({level:player.level,gold:player.gold}))}catch(e){}}
+function spawnEnemy(boss=false){let side=Math.floor(Math.random()*4),x=side===0?-25:side===1?W+25:rand(0,W),y=side===2?-25:side===3?H+25:rand(0,H);let type=boss?'boss':Math.random()<.25?'skeleton':Math.random()<.5?'slime':'shadow';let scale=boss?2.1:1;enemies.push({x,y,r:(type==='boss'?27:type==='slime'?13:15),hp:(type==='boss'?190: type==='skeleton'?34:25)+floorNo*4,maxHp:(type==='boss'?190: type==='skeleton'?34:25)+floorNo*4,speed:(type==='boss'?.65:type==='shadow'?1.25:.8)+floorNo*.025,damage:type==='boss'?18:8,type,hit:0,scale});}
+function burst(x,y,color,n=10){for(let i=0;i<n;i++)particles.push({x,y,vx:rand(-3,3),vy:rand(-3,3),life:rand(12,28),color,r:rand(2,4)})}
+function gainXP(n){player.xp+=n;while(player.xp>=player.need){player.xp-=player.need;player.level++;player.need=Math.floor(player.need*1.35);player.maxHp+=8;player.hp=Math.min(player.maxHp,player.hp+25);player.attack+=4;burst(player.x,player.y,'#e879f9',28);ui.msg.innerHTML='<h1>¡NIVEL '+player.level+'!</h1><p>Tu poder de sombras aumenta.</p>';setTimeout(()=>{if(running&&!gameOver)ui.msg.innerHTML=''},1000)}}
+function attack(){if(!running||gameOver)return;attackAnim=12;let hit=false;for(const e of enemies){if(dist(player,e)<78+e.r){e.hp-=player.attack;e.hit=8;burst(e.x,e.y,'#d8b4fe',6);hit=true;if(e.hp<=0)killEnemy(e)}}}
+function killEnemy(e){if(!enemies.includes(e))return;enemies=enemies.filter(x=>x!==e);player.kills++;player.gold+=e.type==='boss'?60:Math.floor(rand(3,10));gainXP(e.type==='boss'?45:10);if(Math.random()<.55||e.type==='boss')loot.push({x:e.x,y:e.y,type:Math.random()<.7?'gold':'heal',life:900});burst(e.x,e.y,e.type==='boss'?'#f0abfc':'#a855f7',18);if(e.type==='boss'){floorNo++;ui.msg.innerHTML='<h1>¡JEFE DERROTADO!</h1><p>Has avanzado al piso '+floorNo+'.</p>';setTimeout(()=>{if(running&&!gameOver)ui.msg.innerHTML=''},1500);for(let i=0;i<3+floorNo;i++)spawnEnemy();if(floorNo%3===0)spawnEnemy(true)}save()}
+function useSkill(){if(!running||gameOver||player.skillCd>0)return;player.skillCd=240;burst(player.x,player.y,'#c026d3',45);for(const e of [...enemies])if(dist(player,e)<155){e.hp-=55+player.level*4;e.hit=12;if(e.hp<=0)killEnemy(e)}}
+function dash(){if(!running||gameOver||player.dashCd>0)return;player.dashCd=100;player.invuln=22;let dx=joy.x||((keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0)),dy=joy.y||((keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0));if(!dx&&!dy)dx=1;let l=Math.hypot(dx,dy)||1;player.x+=dx/l*100;player.y+=dy/l*100;player.x=Math.max(18,Math.min(W-18,player.x));player.y=Math.max(55,Math.min(H-18,player.y));burst(player.x,player.y,'#c084fc',16)}
+function heal(){if(!running||gameOver||player.healCd>0||player.hp>=player.maxHp)return;player.healCd=420;player.hp=Math.min(player.maxHp,player.hp+35);burst(player.x,player.y,'#86efac',14)}
+function update(){
+ if(!running||gameOver)return;frame++;player.skillCd=Math.max(0,player.skillCd-1);player.dashCd=Math.max(0,player.dashCd-1);player.healCd=Math.max(0,player.healCd-1);player.invuln=Math.max(0,player.invuln-1);attackAnim=Math.max(0,attackAnim-1);
+ let dx=joy.x,dy=joy.y;if(!stickOn){dx=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0);dy=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0)}let l=Math.hypot(dx,dy);if(l){player.x+=dx/l*player.speed;player.y+=dy/l*player.speed}player.x=Math.max(15,Math.min(W-15,player.x));player.y=Math.max(55,Math.min(H-18,player.y));
+ spawnTimer++;if(spawnTimer>95&&enemies.length<Math.min(7+floorNo,18)){spawnEnemy();spawnTimer=0}
+ for(const e of [...enemies]){let vx=player.x-e.x,vy=player.y-e.y,d=Math.hypot(vx,vy)||1;e.x+=vx/d*e.speed;e.y+=vy/d*e.speed;if(d<e.r+player.r+2&&player.invuln<=0){player.hp-=e.damage/30;player.invuln=2;if(player.hp<=0){player.hp=0;gameOver=true;ui.msg.innerHTML='<h1>HAS CAÍDO</h1><p>Piso '+floorNo+' · Pulsa “Volver a jugar” para intentarlo de nuevo.</p><button class="primary" onclick="location.reload()">VOLVER A JUGAR</button>';save()}}if(e.hit>0)e.hit--}
+ for(const p of [...particles]){p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(particles.indexOf(p),1)}
+ for(const l of [...loot]){l.life--;if(dist(player,l)<28){if(l.type==='gold')player.gold+=15;else player.hp=Math.min(player.maxHp,player.hp+20);loot.splice(loot.indexOf(l),1);save()}else if(l.life<=0)loot.splice(loot.indexOf(l),1)}
+ ui.floor.textContent='PISO '+floorNo;ui.level.textContent=player.level;ui.hp.textContent=Math.ceil(player.hp)+'/'+player.maxHp;ui.xp.textContent=player.xp;ui.need.textContent=player.need;ui.xpbar.style.width=(player.xp/player.need*100)+'%';ui.gold.textContent=player.gold;ui.kills.textContent='Derrotados: '+player.kills;
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);ctx.fillStyle='#100b1c';ctx.fillRect(0,0,W,H);
+ // dungeon tiles
+ let tile=42;for(let y=0;y<H;y+=tile)for(let x=0;x<W;x+=tile){ctx.fillStyle=((x/tile+y/tile)%2===0)?'#171025':'#140e20';ctx.fillRect(x,y,tile-1,tile-1);ctx.strokeStyle='#38234a55';ctx.strokeRect(x+.5,y+.5,tile-1,tile-1)}
+ // glowing crystals
+ for(let i=0;i<7;i++){let x=(i*173+67)%W,y=(i*127+110)%H;ctx.save();ctx.shadowBlur=14;ctx.shadowColor='#a855f7';ctx.fillStyle='#8b5cf6';ctx.beginPath();ctx.moveTo(x,y-9);ctx.lineTo(x+5,y);ctx.lineTo(x,y+9);ctx.lineTo(x-5,y);ctx.closePath();ctx.fill();ctx.restore()}
+ for(const l of loot){ctx.save();ctx.shadowBlur=12;ctx.shadowColor=l.type==='gold'?'#facc15':'#86efac';ctx.fillStyle=l.type==='gold'?'#facc15':'#86efac';ctx.beginPath();ctx.arc(l.x,l.y,7,0,Math.PI*2);ctx.fill();ctx.restore()}
+ for(const e of enemies){ctx.save();ctx.translate(e.x,e.y);ctx.shadowBlur=e.type==='boss'?25:12;ctx.shadowColor=e.type==='boss'?'#f0abfc':'#a855f7';ctx.fillStyle=e.hit>0?'#fff':e.type==='boss'?'#701a75':e.type==='slime'?'#6d28d9':e.type==='skeleton'?'#d8c9e8':'#3b1b5c';ctx.beginPath();if(e.type==='slime'){ctx.ellipse(0,2,e.r*1.2,e.r*.9,0,0,Math.PI*2)}else{ctx.arc(0,0,e.r,0,Math.PI*2)}ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#f5d0fe';ctx.beginPath();ctx.arc(-5,-3,2.3,0,Math.PI*2);ctx.arc(5,-3,2.3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#3b102f';ctx.fillRect(-e.r,-e.r-9,e.r*2,4);ctx.fillStyle='#fb7185';ctx.fillRect(-e.r,-e.r-9,e.r*2*Math.max(0,e.hp/e.maxHp),4);ctx.restore()}
+ // player shadow and body
+ ctx.save();ctx.translate(player.x,player.y);if(player.invuln>0&&frame%6<3)ctx.globalAlpha=.45;ctx.shadowBlur=18;ctx.shadowColor='#c084fc';ctx.fillStyle='#4c1d95';ctx.beginPath();ctx.arc(0,0,player.r+3,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#d8b4fe';ctx.beginPath();ctx.arc(0,-3,9,0,Math.PI*2);ctx.fill();ctx.fillStyle='#6b21a8';ctx.beginPath();ctx.moveTo(-10,4);ctx.lineTo(10,4);ctx.lineTo(7,15);ctx.lineTo(-7,15);ctx.closePath();ctx.fill();ctx.strokeStyle='#f5d0fe';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(8,3);ctx.lineTo(19,-12);ctx.stroke();ctx.strokeStyle='#a855f7';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(7,4);ctx.lineTo(18,-11);ctx.stroke();if(attackAnim>0){ctx.strokeStyle='#e879f9';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,45,-1.2,1.1);ctx.stroke()}ctx.restore();
+ for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/28);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
+ if(!enemies.some(e=>e.type==='boss')&&floorNo%3===0){ctx.fillStyle='#e9d5ff';ctx.font='12px system-ui';ctx.fillText('JEFE CERCA',W/2-38,65)}
+}
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
+document.getElementById('play').addEventListener('click',()=>{document.getElementById('startOverlay').style.display='none';running=true;reset()});
+document.getElementById('attack').addEventListener('pointerdown',e=>{e.preventDefault();attack()});
+document.getElementById('skill').addEventListener('pointerdown',e=>{e.preventDefault();useSkill()});
+document.getElementById('dash').addEventListener('pointerdown',e=>{e.preventDefault();dash()});
+document.getElementById('heal').addEventListener('pointerdown',e=>{e.preventDefault();heal()});
+addEventListener('keydown',e=>{keys[e.key]=true;if(e.key===' '){e.preventDefault();attack()}if(e.key.toLowerCase()==='q')useSkill();if(e.key==='Shift')dash();if(e.key.toLowerCase()==='e')heal()});
+addEventListener('keyup',e=>keys[e.key]=false);
+const stick=document.getElementById('stick'),nub=document.getElementById('nub');
+function joyMove(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy,max=r.width*.32,l=Math.hypot(dx,dy);if(l>max){dx=dx/l*max;dy=dy/l*max}joy.x=dx/max;joy.y=dy/max;nub.style.transform=`translate(${dx}px,${dy}px)`}
+stick.addEventListener('pointerdown',e=>{stickOn=true;stick.setPointerCapture(e.pointerId);joyMove(e)});stick.addEventListener('pointermove',e=>{if(stickOn)joyMove(e)});function endJoy(){stickOn=false;joy.x=joy.y=0;nub.style.transform='translate(0,0)'}stick.addEventListener('pointerup',endJoy);stick.addEventListener('pointercancel',endJoy);
+})();
+</script>
+</body>
+</html>
