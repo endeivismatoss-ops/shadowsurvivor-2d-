@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ShadowSurvivor 2D</title>
+<style>
+:root{--bg:#0b0d14;--panel:#151a26;--line:#343b50;--text:#f1f3fa;--muted:#a5aec4;--violet:#9a6bff;--red:#ef5364;--gold:#ffd166}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#1a2030,#080a10 70%);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #272d3d;background:#0d111b}
+.brand{font-weight:900;letter-spacing:1px}.brand span{color:#b18cff}.tiny{color:var(--muted);font-size:12px}
+main{max-width:1100px;margin:auto;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:12px}
+.panel{background:linear-gradient(160deg,#171d2b,#10141e);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+.canvas-wrap{position:relative;background:#080b10;isolation:isolate}.canvas-wrap:after{content:'';position:absolute;inset:0;pointer-events:none;border:1px solid #66508d55;box-shadow:inset 0 0 42px #02030acc}.canvas-wrap canvas{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;min-height:290px}
+.overlay{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.pill{padding:5px 8px;border:1px solid #424960;background:#101521dd;border-radius:7px;font-size:11px}
+.hud{padding:12px;display:grid;gap:8px}.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.bar{height:8px;background:#303648;border-radius:9px;overflow:hidden;margin-top:4px}.fill{height:100%;width:100%;transition:width .15s}.hp{background:linear-gradient(90deg,#d93655,#ff7a80)}.mp{background:linear-gradient(90deg,#6852df,#b18cff)}.xp{background:linear-gradient(90deg,#c28b25,#ffe08a)}
+button{font:inherit;color:var(--text);background:#242b3d;border:1px solid #454d65;border-radius:9px;padding:9px 10px;cursor:pointer;touch-action:manipulation}
+button:hover{filter:brightness(1.15)}button:active{transform:translateY(1px)}button.primary{background:linear-gradient(135deg,#6842b8,#47318a);border-color:#9b7be8}button:disabled{opacity:.4;cursor:not-allowed}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:8px}.tabs button{padding:8px 4px;font-size:12px}.tabs button.active{background:#45336f;border-color:#a58af1}
+.side-content{padding:0 12px 12px;min-height:250px}.section-title{font-size:12px;color:#b8c0d5;text-transform:uppercase;letter-spacing:1px;margin:8px 0}.item{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #2b3244}.item:last-child{border:0}.rarity{font-size:11px;color:var(--gold)}.log{max-height:150px;overflow:auto;font-size:12px;color:#c4cbe0;line-height:1.45}.log div{padding:4px 0;border-bottom:1px solid #242a39}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px;border-top:1px solid #2b3244}.actions button{font-size:12px;padding:10px 4px}.mobile-controls{display:none;padding:12px;gap:12px;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#121827,#0e121c)}.in-game-controls{position:absolute;inset:auto 0 0 0;z-index:5;padding:12px 10px 14px;align-items:flex-end;background:linear-gradient(0deg,#070912cc,#07091266 72%,transparent);pointer-events:none}.in-game-controls .dpad,.in-game-controls .mobile-actions{pointer-events:auto}.in-game-controls .dpad{grid-template-columns:repeat(3,clamp(34px,10vw,48px));grid-template-rows:repeat(3,clamp(32px,9vw,44px));gap:3px}.in-game-controls .dpad button{border-radius:50%;background:#222b40dd;border:1px solid #8990b5aa;box-shadow:0 3px 10px #0008;font-size:16px}.in-game-controls .dpad .empty{visibility:hidden}.in-game-controls .mobile-actions{max-width:150px;grid-template-columns:repeat(2,clamp(48px,14vw,62px));gap:8px;justify-content:end}.in-game-controls .mobile-actions button{height:clamp(48px,14vw,62px);width:clamp(48px,14vw,62px);border-radius:50%;font-size:19px;background:#252b40e8;border:1px solid #8d85b8aa;box-shadow:0 3px 10px #0008}.in-game-controls .mobile-actions #touchAttack{height:clamp(58px,16vw,72px);width:clamp(58px,16vw,72px);font-size:23px}.dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,40px);gap:4px}.dpad button{padding:0;font-size:17px}.dpad .empty{visibility:hidden}.mobile-actions{display:grid;grid-template-columns:repeat(2,minmax(66px,1fr));gap:7px;flex:1;max-width:240px}.mobile-actions button{height:46px;padding:3px;font-size:11px;font-weight:750;border-radius:12px}.mobile-controls button{user-select:none;-webkit-user-select:none;touch-action:none}
+.notice{padding:9px 12px;color:#cbd3e8;background:#101521;border-top:1px solid #2b3244;font-size:12px}
+footer{text-align:center;color:#7f8aa5;font-size:11px;padding:0 12px 15px}
+@media(max-width:760px){main{display:flex;flex-direction:column;padding:7px;gap:9px}.sidebar{order:2}.game{order:1}.mobile-controls{display:flex}.desktop-hint{display:none}.canvas-wrap canvas{min-height:360px}.canvas-wrap{overflow:hidden}.in-game-controls{min-height:160px}header{padding:9px 10px;gap:8px}.brand{font-size:13px}.tiny{font-size:11px}.canvas-wrap canvas{width:100%;min-height:0}.hud{padding:10px}.side-content{min-height:150px}.actions button{min-height:42px}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">☾ SHADOW<span>SURVIVOR</span></div><div class="tiny">RPG 2D · Mazmorras, reliquias y jefes</div></div><div class="row"><button id="saveBtn">Guardar</button><button id="resetBtn">Reiniciar</button></div></header>
+<main>
+<section class="panel game">
+<div class="canvas-wrap"><canvas id="game" width="720" height="480" aria-label="Mapa jugable"></canvas><div class="overlay"><div class="pill" id="floorTag">CRIPTA · PISO 1</div><div class="pill" id="objective">Explora y derrota monstruos</div></div>
+<div class="mobile-controls in-game-controls">
+ <div class="dpad"><button class="empty">·</button><button data-move="up" aria-label="Arriba">▲</button><button class="empty">·</button><button data-move="left" aria-label="Izquierda">◀</button><button data-move="down" aria-label="Abajo">▼</button><button data-move="right" aria-label="Derecha">▶</button><button class="empty">·</button><button id="interactBtn">◎</button><button class="empty">·</button></div>
+ <div class="mobile-actions"><button id="touchAttack" class="primary">⚔</button><button id="touchSkill">🌑</button><button id="touchHeal">✚</button><button id="touchBurst">✧</button></div>
+</div></div>
+<div class="hud">
+ <div class="row"><div><b id="heroName">Cazador de Sombras</b><div class="tiny" id="levelText">Nivel 1 · 0/100 XP</div></div><div style="text-align:right"><b id="goldText">◈ 0</b><div class="tiny" id="statText">ATQ 12 · DEF 2</div></div></div>
+ <div><div class="row"><span>❤️ Vida</span><span id="hpText">100/100</span></div><div class="bar"><div class="fill hp" id="hpBar"></div></div></div>
+ <div><div class="row"><span>✦ Maná</span><span id="mpText">50/50</span></div><div class="bar"><div class="fill mp" id="mpBar"></div></div></div>
+ <div><div class="row"><span>★ Experiencia</span><span id="xpText">0%</span></div><div class="bar"><div class="fill xp" id="xpBar"></div></div></div>
+</div>
+<div class="actions desktop-hint"><button id="attackBtn" class="primary">⚔ Atacar (Espacio)</button><button id="skillBtn">🌑 Corte de sombra (Q)</button><button id="healBtn">✚ Drenaje (E)</button><button id="burstBtn">✧ Estallido (R)</button><button id="interactDesk">◎ Interactuar (F)</button><button id="mapBtn">⌖ Centrar mapa</button></div>
+<div class="notice" id="status">Mueve con WASD o las flechas. Acércate a los enemigos y ataca. Pulsa F junto a un portal.</div>
+</section>
+<aside class="panel sidebar">
+<div class="tabs"><button class="active" data-tab="inventory">🎒 Bolsa</button><button data-tab="skills">✦ Habilidades</button><button data-tab="journal">📜 Registro</button></div>
+<div class="side-content" id="sideContent"></div>
+<div class="notice">💾 Guardado local automático en este navegador.</div>
+</aside>
+</main>
+<footer>ShadowSurvivor 2D · Explora criptas, reúne reliquias y derrota jefes. PC: WASD/flechas, Espacio, Q, E, R y F. iPhone: joystick y botones dentro del mapa, estilo arena móvil.</footer>
+<script>
+(()=>{
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const TILE=32, MW=45, MH=30;
+let map=[],enemies=[],loot=[],particles=[],logs=[],tab='inventory',last=0,autoSave=0;
+const keys={};
+const fresh=()=>({x:4.5*TILE,y:4.5*TILE,hp:100,maxHp:100,mp:50,maxMp:50,level:1,xp:0,gold:0,atk:12,def:2,floor:1,potions:2,kills:0,bossKills:0,skills:{shadow:false,drain:true,burst:false},inventory:[{name:'Espada mellada',type:'arma',desc:'+2 ataque',rarity:'Común',atk:2},{name:'Capa de ceniza',type:'armadura',desc:'+2 defensa',rarity:'Común',def:2}],equipped:{weapon:'Espada mellada',armor:'Capa de ceniza'},dead:false});
+let p=fresh();
+function say(t){logs.unshift(t);logs=logs.slice(0,10);document.getElementById('status').textContent=t;renderSide()}
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function genMap(){
+ map=Array.from({length:MH},(_,y)=>Array.from({length:MW},(_,x)=>(x===0||y===0||x===MW-1||y===MH-1)?1:0));
+ // Stone chambers connected by broken corridors
+ const rooms=[];
+ for(let i=0;i<13;i++){let w=rnd(4,8),h=rnd(3,6),x=rnd(2,MW-w-3),y=rnd(2,MH-h-3);rooms.push({x,y,w,h,cx:x+Math.floor(w/2),cy:y+Math.floor(h/2)});for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)if(xx===x||yy===y||xx===x+w-1||yy===y+h-1)map[yy][xx]=1;map[y+rnd(1,h-2)][x]=0;map[y+rnd(1,h-2)][x+w-1]=0;}
+ for(let i=1;i<rooms.length;i++){let a=rooms[i-1],b=rooms[i];let x=a.cx,y=a.cy;while(x!==b.cx){map[y][x]=0;x+=x<b.cx?1:-1}while(y!==b.cy){map[y][x]=0;y+=y<b.cy?1:-1}}
+ // start chamber and portal chamber stay clear
+ for(let y=2;y<9;y++)for(let x=2;x<11;x++)map[y][x]=0;
+ for(let y=MH-8;y<MH-2;y++)for(let x=MW-10;x<MW-2;x++)map[y][x]=0;
+ // scatter rubble and pillars, not blocking the spawn or exit
+ for(let i=0;i<32;i++){let x=rnd(12,MW-12),y=rnd(3,MH-4);if(Math.random()<.52)map[y][x]=1}
+ for(let y=MH-5;y<MH-3;y++)for(let x=MW-5;x<MW-3;x++)map[y][x]=0;
+ map[MH-4][MW-4]=2;
+}
+function walkable(x,y){let tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return tx>=0&&ty>=0&&tx<MW&&ty<MH&&map[ty][tx]!==1}
+function placeEnemies(){
+ enemies=[];loot=[];
+ const types=[
+  {type:'Hongo umbrío',hp:22,spd:25,color:'#72b66c',xp:18,atk:4},
+  {type:'Esqueleto errante',hp:34,spd:23,color:'#d7d9d0',xp:24,atk:7},
+  {type:'Lobo de hollín',hp:27,spd:48,color:'#b65f78',xp:22,atk:6},
+  {type:'Murciélago espectral',hp:18,spd:62,color:'#7ca7ff',xp:20,atk:5},
+  {type:'Caballero hueco',hp:58,spd:18,color:'#c08c58',xp:38,atk:10}
+ ];
+ for(let i=0;i<12+Math.min(p.floor*2,20);i++){let x,y,tries=0;do{x=rnd(11,MW-4)*TILE+16;y=rnd(3,MH-4)*TILE+16;tries++}while((!walkable(x,y)||Math.hypot(x-p.x,y-p.y)<220)&&tries<400);if(tries>=400)continue;
+  let t=types[rnd(0,Math.min(types.length-1,1+Math.floor(p.floor/2)))],hp=t.hp+p.floor*5;
+  enemies.push({x,y,hp,maxHp:hp,atk:t.atk+p.floor,spd:t.spd,xp:t.xp+p.floor*3,gold:rnd(4,11)+p.floor,type:t.type,boss:false,color:t.color,hit:0,phase:Math.random()*6,cool:rnd(500,1200)})}
+ if(p.floor%5===0){let x=(MW-5)*TILE+16,y=(MH-5)*TILE+16;let hp=240+p.floor*25;enemies.push({x,y,hp,maxHp:hp,atk:16+p.floor,spd:20,xp:220,gold:130+p.floor*12,type:'CARCELERO ABISMAL',boss:true,color:'#bd49e8',hit:0,phase:0,cool:700})}
+}
+function resetDungeon(next=false){if(next)p.floor++;genMap();p.x=4.5*TILE;p.y=4.5*TILE;p.hp=Math.min(p.maxHp,p.hp+25);p.mp=Math.min(p.maxMp,p.mp+20);placeEnemies();say('Piso '+p.floor+': la oscuridad se vuelve más profunda.');updateHud()}
+function tileAt(x,y){return map[Math.floor(y/TILE)]?.[Math.floor(x/TILE)]??1}
+function draw(){
+ const now=Date.now();ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#070910';ctx.fillRect(0,0,canvas.width,canvas.height);
+ const camX=Math.max(0,Math.min(MW*TILE-canvas.width,p.x-canvas.width/2)),camY=Math.max(0,Math.min(MH*TILE-canvas.height,p.y-canvas.height/2));
+ let sx=Math.max(0,Math.floor(camX/TILE)),sy=Math.max(0,Math.floor(camY/TILE)),ex=Math.min(MW,sx+Math.ceil(canvas.width/TILE)+2),ey=Math.min(MH,sy+Math.ceil(canvas.height/TILE)+2);
+ for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){let t=map[y][x],px=x*TILE-camX,py=y*TILE-camY;
+  if(t===1){ctx.fillStyle='#252735';ctx.fillRect(px,py,TILE,TILE);ctx.fillStyle='#414052';ctx.fillRect(px,py,TILE,3);ctx.fillStyle='#171a26';ctx.fillRect(px,py+TILE-4,TILE,4);ctx.fillStyle='#343449';ctx.fillRect(px+4,py+7,6,3);ctx.fillStyle='#1a1d29';ctx.fillRect(px+21,py+16,7,2);}
+  else if(t===2){ctx.fillStyle='#1b1029';ctx.fillRect(px,py,TILE,TILE);ctx.save();ctx.shadowBlur=22;ctx.shadowColor='#a35bff';ctx.fillStyle='#9a5cff';ctx.beginPath();ctx.arc(px+16,py+16,10+Math.sin(now/170)*3,0,Math.PI*2);ctx.fill();ctx.restore();ctx.strokeStyle='#e3c9ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px+16,py+16,6,now/300,now/300+Math.PI*1.4);ctx.stroke();}
+  else {ctx.fillStyle=((x+y)%2===0)?'#141a24':'#171e29';ctx.fillRect(px,py,TILE,TILE);ctx.strokeStyle='#202735';ctx.strokeRect(px+.5,py+.5,TILE-1,TILE-1);let seed=(x*17+y*9)%23;if(seed===0){ctx.fillStyle='#3b3946';ctx.fillRect(px+8,py+9,3,3);ctx.fillRect(px+12,py+13,2,2)}else if(seed===4){ctx.fillStyle='#3b2b43';ctx.fillRect(px+14,py+19,3,7)} }
+ }
+ // Decorative torches around explored-looking rooms
+ for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++)if(map[y][x]===1&&(x*7+y*11)%31===0){let tx=x*TILE-camX+16,ty=y*TILE-camY+16;ctx.save();ctx.globalAlpha=.35;let g=ctx.createRadialGradient(tx,ty,1,tx,ty,38);g.addColorStop(0,'#ffb65c');g.addColorStop(1,'#ff8c2400');ctx.fillStyle=g;ctx.beginPath();ctx.arc(tx,ty,38,0,Math.PI*2);ctx.fill();ctx.restore();ctx.fillStyle='#ffb85d';ctx.fillRect(tx-2,ty-4,4,8)}
+ for(const l of loot){let x=l.x-camX,y=l.y-camY;ctx.save();ctx.shadowBlur=13;ctx.shadowColor=l.type==='gear'?'#ffd166':l.type==='gold'?'#ffe16b':'#72ffc2';ctx.fillStyle=l.type==='gear'?'#ffd166':l.type==='gold'?'#ffe16b':'#79e8bb';ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillRect(-6,-6,12,12);ctx.restore();ctx.fillStyle='#fff5cb';ctx.fillRect(x-2,y-2,4,4)}
+ for(const e of enemies){if(e.hp<=0)continue;let x=e.x-camX,y=e.y-camY;let r=e.boss?22:e.type==='Caballero hueco'?14:11;ctx.save();ctx.shadowBlur=e.boss?24:10;ctx.shadowColor=e.color||'#a45cff';ctx.fillStyle=e.color||'#78a36a';ctx.beginPath();ctx.arc(x,y+2,r,0,Math.PI*2);ctx.fill();ctx.restore();
+  // eyes and distinct silhouettes
+  if(e.type.includes('Esqueleto')){ctx.strokeStyle='#fff0cf';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-5,y+6);ctx.lineTo(x-5,y+13);ctx.moveTo(x+5,y+6);ctx.lineTo(x+5,y+13);ctx.stroke();}
+  else if(e.type.includes('Lobo')){ctx.fillStyle=e.color;ctx.beginPath();ctx.moveTo(x-8,y-6);ctx.lineTo(x-12,y-15);ctx.lineTo(x-2,y-10);ctx.moveTo(x+8,y-6);ctx.lineTo(x+12,y-15);ctx.lineTo(x+2,y-10);ctx.fill();}
+  else if(e.boss){ctx.fillStyle='#f7d8ff';ctx.beginPath();ctx.moveTo(x-14,y-13);ctx.lineTo(x-18,y-29);ctx.lineTo(x-5,y-20);ctx.lineTo(x+5,y-20);ctx.lineTo(x+18,y-29);ctx.lineTo(x+14,y-13);ctx.fill();ctx.strokeStyle='#f6a8ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,r+7,now/400,now/400+Math.PI*1.4);ctx.stroke();}
+  ctx.fillStyle='#fff0dc';ctx.fillRect(x-5,y-3,3,3);ctx.fillRect(x+3,y-3,3,3);if(e.hit>0){ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r+5,0,Math.PI*2);ctx.stroke();e.hit--}
+  let bw=e.boss?58:34;ctx.fillStyle='#211621';ctx.fillRect(x-bw/2,y-(e.boss?36:24),bw,5);ctx.fillStyle=e.boss?'#ff62c8':'#ed4d62';ctx.fillRect(x-bw/2,y-(e.boss?36:24),bw*Math.max(0,e.hp/e.maxHp),5);if(e.boss){ctx.fillStyle='#ffd9fb';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText('JEFE · '+Math.ceil(e.hp)+' HP',x,y-41)}
+ }
+ // Hero with cloak, body, blade and aura
+ let px=p.x-camX,py=p.y-camY;ctx.save();ctx.shadowBlur=18;ctx.shadowColor='#a875ff';ctx.fillStyle='#4b2c76';ctx.beginPath();ctx.moveTo(px-10,py-5);ctx.lineTo(px+9,py-5);ctx.lineTo(px+12,py+15);ctx.lineTo(px,py+21);ctx.lineTo(px-12,py+15);ctx.closePath();ctx.fill();ctx.fillStyle='#a67bff';ctx.beginPath();ctx.arc(px,py-5,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f0e5ff';ctx.beginPath();ctx.arc(px,py-7,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#20172c';ctx.fillRect(px-5,py-2,10,7);ctx.strokeStyle='#d8c0ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px+8,py-2);ctx.lineTo(px+21,py-11);ctx.stroke();ctx.restore();
+ // subtle visibility vignette
+ const g=ctx.createRadialGradient(px,py,80,px,py,390);g.addColorStop(0,'#00000000');g.addColorStop(.72,'#02040a35');g.addColorStop(1,'#02030add');ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);
+ requestAnimationFrame(draw)
+}
+function move(dx,dy){if(p.dead)return;const sp=3.9;let nx=p.x+dx*sp,ny=p.y+dy*sp;if(walkable(nx-9,p.y-7)&&walkable(nx+9,p.y+7))p.x=nx;if(walkable(p.x-8,ny-8)&&walkable(p.x+8,ny+8))p.y=ny;checkPickups()}
+function update(dt){if(p.dead)return;let dx=0,dy=0;if(keys.ArrowUp||keys.w)dy--;if(keys.ArrowDown||keys.s)dy++;if(keys.ArrowLeft||keys.a)dx--;if(keys.ArrowRight||keys.d)dx++;if(dx||dy){let n=Math.hypot(dx,dy);move(dx/n*dt*0.17,dy/n*dt*0.17)}
+ for(const e of enemies){if(e.hp<=0)continue;let d=Math.hypot(p.x-e.x,p.y-e.y);if(d<220&&d>25){let nx=e.x+(p.x-e.x)/d*e.spd*dt/1000,ny=e.y+(p.y-e.y)/d*e.spd*dt/1000;if(walkable(nx,ny)){e.x=nx;e.y=ny}}if(d<28){e.cool=(e.cool||0)-dt;if(e.cool<=0){e.cool=e.boss?850:1250;let dmg=Math.max(1,e.atk-p.def);p.hp-=dmg;say(e.type+' te golpea: -'+dmg+' HP.');if(p.hp<=0){p.hp=0;p.dead=true;say('Has caído. Pulsa ◎ para revivir y regresar a la entrada.')}updateHud()}}}
+ autoSave+=dt;if(autoSave>15000){save(false);autoSave=0}
+}
+function checkPickups(){for(let i=loot.length-1;i>=0;i--){let l=loot[i];if(Math.hypot(p.x-l.x,p.y-l.y)<24){loot.splice(i,1);if(l.type==='gold'){p.gold+=l.amount;say('Recoges '+l.amount+' monedas.')}else if(l.type==='potion'){p.potions++;say('¡Has encontrado una poción!')}else{p.inventory.push(l.item);say('Botín: '+l.item.name+' ('+l.item.rarity+').')}updateHud();renderSide()}}}
+function gainXP(n){p.xp+=n;while(p.xp>=p.level*100){p.xp-=p.level*100;p.level++;p.maxHp+=12;p.maxMp+=5;p.atk+=3;p.def+=1;p.hp=p.maxHp;p.mp=p.maxMp;if(p.level>=2)p.skills.shadow=true;if(p.level>=3)p.skills.burst=true;say('¡Nivel '+p.level+'! +12 vida máxima, +3 ataque, +1 defensa.');}updateHud()}
+function attack(){if(p.dead)return;let e=nearestEnemy(76);if(!e){say('Acércate a un monstruo para atacar.');return}let dmg=rnd(Math.max(1,p.atk-2),p.atk+6);e.hp-=dmg;e.hit=7;particles.push({x:e.x,y:e.y,life:260,color:'#e5d0ff'});say('⚔ Golpeas a '+e.type+' por '+dmg+' de daño.');if(e.hp<=0)killEnemy(e);updateHud()}
+function nearestEnemy(range){let arr=enemies.filter(e=>e.hp>0&&Math.hypot(p.x-e.x,p.y-e.y)<range).sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y));return arr[0]}
+function killEnemy(e){p.kills++;p.gold+=e.gold;gainXP(e.xp);say('Derrotaste a '+e.type+': +'+e.xp+' XP, +'+e.gold+' monedas.');if(Math.random()<.28)loot.push({x:e.x,y:e.y,type:'potion'});if(Math.random()<.38){let gear=rnd(0,3),items=[{name:'Daga espectral',desc:'+4 ataque',atk:4,type:'arma'},{name:'Anillo de hollín',desc:'+2 ataque · +1 defensa',atk:2,def:1,type:'accesorio'},{name:'Manto del osario',desc:'+4 defensa',def:4,type:'armadura'},{name:'Amuleto abisal',desc:'+5 ataque',atk:5,type:'accesorio'}];let it={...items[gear],rarity:Math.random()<.12?'Épico':'Raro'};loot.push({x:e.x+14,y:e.y+10,type:'gear',item:it})}if(e.boss){p.bossKills++;let relic={name:'Núcleo del Carcelero',type:'reliquia',desc:'+8 ataque · trofeo de jefe',rarity:'Legendario',atk:8};loot.push({x:e.x+18,y:e.y,type:'gear',item:relic});loot.push({x:e.x+30,y:e.y,type:'gold',amount:100});p.skills.burst=true;say('¡JEFE DERROTADO! Suelta un Núcleo legendario.')}updateHud();renderSide()}
+function skill(which){if(p.dead)return;let cost=which==='shadow'?20:which==='drain'?10:30;if(which==='shadow'&&!p.skills.shadow){say('Corte de sombra se desbloquea al nivel 2.');return}if(which==='burst'&&!p.skills.burst){say('Estallido abisal se desbloquea al nivel 3 o al vencer un jefe.');return}if(p.mp<cost){say('No tienes maná suficiente.');return}p.mp-=cost;
+ if(which==='drain'){let e=nearestEnemy(100);if(!e){p.mp+=cost;say('Necesitas un enemigo a menos de 100 px.');return}let dmg=18+p.level*4;e.hp-=dmg;p.hp=Math.min(p.maxHp,p.hp+Math.ceil(dmg*.7));say('Drenaje umbrío: '+dmg+' daño y recuperas vida.');if(e.hp<=0)killEnemy(e)}
+ if(which==='shadow'){let hit=enemies.filter(e=>e.hp>0&&Math.hypot(p.x-e.x,p.y-e.y)<105);if(!hit.length){p.mp+=cost;say('No hay enemigos cerca para el Corte de sombra.');return}for(let e of hit){e.hp-=28+p.atk;if(e.hp<=0)killEnemy(e)}say('¡CORTE DE SOMBRA! Golpeas a '+hit.length+' enemigo(s) en un arco oscuro.')}
+ if(which==='burst'){let hit=enemies.filter(e=>e.hp>0&&Math.hypot(p.x-e.x,p.y-e.y)<150);if(!hit.length){p.mp+=cost;say('Acércate a los enemigos para liberar Estallido abisal.');return}for(let e of hit){e.hp-=45+p.level*8;if(e.hp<=0)killEnemy(e)}say('¡ESTALLIDO ABISAL! La onda oscura golpea a '+hit.length+' enemigo(s).')}
+ updateHud();renderSide()}
+function interact(){if(p.dead){p.dead=false;p.hp=Math.max(50,Math.ceil(p.maxHp*.65));p.mp=Math.ceil(p.maxMp*.5);p.x=4.5*TILE;p.y=4.5*TILE;enemies=enemies.filter(e=>!e.boss);say('Vuelves a la entrada. Los monstruos restantes siguen aquí.');updateHud();return}
+ let tx=Math.floor(p.x/TILE),ty=Math.floor(p.y/TILE);let found=false;for(let y=ty-1;y<=ty+1;y++)for(let x=tx-1;x<=tx+1;x++)if(map[y]?.[x]===2)found=true;
+ if(found){if(enemies.some(e=>e.hp>0&&e.boss)){say('El portal está sellado: derrota al jefe primero.');return}resetDungeon(true);return}
+ checkPickups();say('No hay nada que activar cerca. Busca el portal violeta al sureste.')}
+function updateHud(){const el=id=>document.getElementById(id);el('levelText').textContent='Nivel '+p.level+' · '+p.xp+'/'+(p.level*100)+' XP';el('goldText').textContent='◈ '+p.gold;el('statText').textContent='ATQ '+p.atk+' · DEF '+p.def;el('hpText').textContent=p.hp+'/'+p.maxHp;el('mpText').textContent=p.mp+'/'+p.maxMp;el('hpBar').style.width=(p.hp/p.maxHp*100)+'%';el('mpBar').style.width=(p.mp/p.maxMp*100)+'%';el('xpBar').style.width=(p.xp/(p.level*100)*100)+'%';el('xpText').textContent=Math.floor(p.xp/(p.level*100)*100)+'%';el('floorTag').textContent='CRIPTA · PISO '+p.floor;el('objective').textContent=enemies.some(e=>e.hp>0&&e.boss)?'Derrota al jefe para abrir el portal':'Derrota monstruos · busca el portal violeta';el('skillBtn').disabled=!p.skills.shadow||p.mp<20;el('burstBtn').disabled=!p.skills.burst||p.mp<30;el('touchSkill').disabled=!p.skills.shadow||p.mp<20;el('touchBurst').disabled=!p.skills.burst||p.mp<30}
+function renderSide(){let c=document.getElementById('sideContent');if(tab==='inventory'){c.innerHTML='<div class="section-title">Equipo</div>'+p.inventory.map((it,i)=>`<div class="item"><div><b>${it.name}</b><div class="tiny">${it.desc||''}</div><div class="rarity">${it.rarity||'Común'}</div></div><button data-equip="${i}">Equipar</button></div>`).join('')+`<div class="section-title">Consumibles</div><div class="item"><span>🧪 Poción (${p.potions})<div class="tiny">Recupera 45 HP</div></span><button id="usePotion">Usar</button></div><div class="item"><span>Monedas</span><b>${p.gold} ◈</b></div>`;
+ c.querySelectorAll('[data-equip]').forEach(b=>b.onclick=()=>{let it=p.inventory[+b.dataset.equip];if(!it||it.type==='reliquia'&&!it.atk&&!it.def){say('Esta reliquia es un objeto de colección.');return}it._applied=it._applied||false;if(it._applied){say('Este objeto ya está equipado.');return}if(it.atk){p.atk+=it.atk;it._baseAtk=it.atk}if(it.def){p.def+=it.def;it._baseDef=it.def}it._applied=true;p.equipped=p.equipped||{};p.equipped[it.type||'gear']=it.name;it.desc=(it.desc||'')+' · EQUIPADO';say('Equipaste '+it.name+'.');updateHud();renderSide()});
+ let u=c.querySelector('#usePotion');if(u)u.onclick=()=>{if(p.potions>0&&p.hp<p.maxHp){p.potions--;p.hp=Math.min(p.maxHp,p.hp+45);say('Poción usada: recuperas vida.');updateHud();renderSide()}else say('No puedes usar una poción ahora.')};
+ }else if(tab==='skills'){c.innerHTML='<div class="section-title">Habilidades únicas</div>'+[
+ ['🌑 Corte de sombra','Nivel 2 · 20 MP','Daño en área alrededor del cazador.',p.skills.shadow],
+ ['🩸 Drenaje umbrío','Disponible · 10 MP','Daña a un enemigo cercano y te cura.',true],
+ ['☄ Estallido abisal','Nivel 3 o jefe · 30 MP','Explosión de daño en un radio amplio.',p.skills.burst]
+ ].map((s,i)=>`<div class="item"><div><b>${s[0]}</b><div class="tiny">${s[1]}</div><div class="tiny">${s[2]}</div></div><button data-skill="${['shadow','drain','burst'][i]}" ${s[3]?'':'disabled'}>Usar</button></div>`).join('')+'<div class="tiny" style="margin-top:10px">Cada habilidad consume maná. Los jefes aparecen cada cinco pisos.</div>';c.querySelectorAll('[data-skill]').forEach(b=>b.onclick=()=>skill(b.dataset.skill))}
+ else {c.innerHTML='<div class="section-title">Crónica del cazador</div>'+`<div class="item"><span>Piso actual</span><b>${p.floor}</b></div><div class="item"><span>Monstruos derrotados</span><b>${p.kills}</b></div><div class="item"><span>Jefes derrotados</span><b>${p.bossKills}</b></div><div class="item"><span>Nivel</span><b>${p.level}</b></div><div class="section-title">Registro reciente</div><div class="log">${logs.map(x=>'<div>'+x+'</div>').join('')}</div>`}
+}
+function save(show=true){try{localStorage.setItem('shadowsurvivor-save-v1',JSON.stringify({p,logs}));if(show)say('Progreso guardado en este navegador.')}catch(e){if(show)say('No se pudo guardar en este navegador.')} }
+function load(){try{let s=JSON.parse(localStorage.getItem('shadowsurvivor-save-v1'));if(s&&s.p){p={...fresh(),...s.p};logs=s.logs||[];return true}}catch(e){}return false}
+function resetSave(){if(confirm('¿Borrar el progreso guardado y comenzar desde cero?')){localStorage.removeItem('shadowsurvivor-save-v1');p=fresh();logs=[];resetDungeon(false);say('Nueva partida iniciada.');updateHud();renderSide()}}
+document.addEventListener('keydown',e=>{let k=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys[k]=true;if(e.repeat)return;if(e.code==='Space')attack();if(k==='q')skill('shadow');if(k==='e')skill('drain');if(k==='r')skill('burst');if(k==='f')interact();});
+document.addEventListener('keyup',e=>{let k=e.key.length===1?e.key.toLowerCase():e.key;keys[k]=false});
+document.querySelectorAll('[data-move]').forEach(b=>{const k={up:'w',down:'s',left:'a',right:'d'}[b.dataset.move];b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(_){}keys[k]=true});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
+document.getElementById('attackBtn').onclick=attack;document.getElementById('touchAttack').onclick=attack;
+document.getElementById('skillBtn').onclick=()=>skill('shadow');document.getElementById('touchSkill').onclick=()=>skill('shadow');
+document.getElementById('healBtn').onclick=()=>skill('drain');document.getElementById('touchHeal').onclick=()=>skill('drain');
+document.getElementById('burstBtn').onclick=()=>skill('burst');document.getElementById('touchBurst').onclick=()=>skill('burst');
+document.getElementById('interactBtn').onclick=interact;document.getElementById('interactDesk').onclick=interact;
+document.getElementById('mapBtn').onclick=()=>{p.x=4.5*TILE;p.y=4.5*TILE;say('Centrado en la entrada de la mazmorra.')};
+document.getElementById('saveBtn').onclick=()=>save(true);document.getElementById('resetBtn').onclick=resetSave;
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));renderSide()});
+let prev=performance.now();function loop(now){let dt=Math.min(40,now-prev);prev=now;update(dt);requestAnimationFrame(loop)}
+if(!load()){genMap();placeEnemies();say('Bienvenido a la Cripta olvidada. Busca monstruos y el portal violeta.')}else{genMap();placeEnemies();say('Partida cargada. Tu progreso está listo.')}
+updateHud();renderSide();draw();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
